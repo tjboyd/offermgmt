@@ -1,0 +1,36 @@
+@import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@0,400;0,600;0,700;0,800;1,700;1,800&family=Barlow:wght@400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  /* R G B channel values — used as rgb(var(--brand) / <alpha>) for Tailwind opacity support */
+  --brand:         173 3 3;    /* #AD0303 */
+  --brand-hover:   122 2 2;    /* #7A0202 */
+  --brand-pressed: 92 1 1;     /* #5C0101 */
+}
+
+@layer base {
+  html, body, #root {
+    @apply h-full;
+  }
+
+  body {
+    @apply bg-bg-primary text-white font-body antialiased overflow-hidden;
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  /* Custom scrollbar */
+  ::-webkit-scrollbar { width: 10px; height: 10px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 5px; }
+  ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.16); }
+}
+
+@layer utilities {
+  .scroll { overflow-y: auto; }
+}
