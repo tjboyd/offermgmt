@@ -8,7 +8,7 @@
  * on any mobile browser without JavaScript.
  */
 import { Router, Request, Response, NextFunction } from 'express';
-import { eq, and } from 'drizzle-orm';
+import { eq, and, isNull } from 'drizzle-orm';
 import crypto from 'crypto';
 import { db, offers, players, seasons, users, userTeamAssignments, config } from '../db';
 import { validateAcceptToken, validateDeclineToken } from '../services/TokenService';
@@ -43,8 +43,8 @@ router.post('/accept/:token', async (req: Request, res: Response, next: NextFunc
     })
     .where(and(
       eq(offers.acceptToken, req.params.token),
-      eq(offers.acceptedAt,  null as unknown as Date),
-      eq(offers.declinedAt,  null as unknown as Date),
+      isNull(offers.acceptedAt),
+      isNull(offers.declinedAt),
     ))
     .returning({ id: offers.id, playerId: offers.playerId, seasonId: offers.seasonId });
 
@@ -68,21 +68,19 @@ router.post('/accept/:token', async (req: Request, res: Response, next: NextFunc
     // Notify coaches (async)
     notifyCoaches(updated.playerId, updated.id, 'accepted').catch(console.error);
 
-    // Record redirect
-    await db.update(offers).set({ seRedirectedAt: new Date() }).where(eq(offers.id, updated.id));
-    await logParentEvent('se_redirected', { playerId: updated.playerId, offerId: updated.id });
-
-    // Redirect to registration URL (season-specific registrationUrl takes priority)
-    const regUrl = validation.registrationUrl ?? validation.seRegistrationUrl;
-    if (regUrl) {
-      return res.redirect(302, regUrl);
-    }
-    // No URL configured — show confirmation page instead of a broken redirect
-    res.setHeader('Content-Type', 'text/html; charset=utf-8');
+    // Show confirmation page with registration link
+    const regUrl  = validation.registrationUrl ?? validation.seRegistrationUrl;
     const branding = await getBranding();
+    const orgName  = branding.orgName ?? 'Jr Chargers';
+    const season   = validation.season?.label ?? 'the upcoming season';
+    const player   = validation.player ? `${validation.player.firstName} ${validation.player.lastName}` : 'your player';
+
+    res.setHeader('Content-Type', 'text/html; charset=utf-8');
     return res.send(pageShell(branding, `<div class="success">
       <h1>✓ Offer accepted!</h1>
-      <p>Thank you! Your acceptance has been recorded. Your coach will be in touch with next steps.</p>
+      <p>Thank you — <strong>${player}</strong>'s acceptance for the <strong>${orgName} ${season}</strong> has been confirmed. A confirmation email has been sent to you.</p>
+      ${regUrl ? `<p style="margin-top:16px;font-size:14px;color:#155724">When you're ready, complete your registration using the button below:</p>
+      <a href="${regUrl}" class="btn-accept" style="background:#2d6a4f;margin-top:4px">Complete Registration →</a>` : ''}
     </div>`));
   } catch (err) { next(err); }
 });
@@ -112,8 +110,8 @@ router.post('/decline/:token', async (req: Request, res: Response, next: NextFun
     })
     .where(and(
       eq(offers.declineToken, req.params.token),
-      eq(offers.acceptedAt,   null as unknown as Date),
-      eq(offers.declinedAt,   null as unknown as Date),
+      isNull(offers.acceptedAt),
+      isNull(offers.declinedAt),
     ))
     .returning({ id: offers.id, playerId: offers.playerId });
 
