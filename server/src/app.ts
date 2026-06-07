@@ -26,6 +26,9 @@ import divisionsRouter       from './routes/divisions';
 export function createApp() {
   const app = express();
 
+  // ─── Health check (must be first — before HTTPS redirect) ────────────────────
+  app.get('/health', (_req, res) => res.json({ ok: true, ts: new Date().toISOString() }));
+
   // ─── Security ────────────────────────────────────────────────────────────────
   app.use(helmet({
     // Allow inline scripts for the server-rendered acceptance landing page
@@ -77,9 +80,6 @@ export function createApp() {
     windowMs: 60 * 1000, max: 30,
     message: 'Too many requests.',
   }));
-
-  // ─── Health check ─────────────────────────────────────────────────────────────
-  app.get('/health', (_req, res) => res.json({ ok: true, ts: new Date().toISOString() }));
 
   // ─── API routes ───────────────────────────────────────────────────────────────
   app.use('/api/v1/auth',         authRouter);
