@@ -4,7 +4,14 @@ import { createApp } from './app';
 
 const PORT = parseInt(process.env.PORT ?? '3001', 10);
 
-async function initSchema(pool: Pool) {
+async function initSchema() {
+  if (process.env.NODE_ENV !== 'production') return;
+
+  const pool = new Pool({
+    connectionString: process.env.DATABASE_URL,
+    ssl: { rejectUnauthorized: false },
+  });
+
   const SQL = `
     CREATE TABLE IF NOT EXISTS users (
       id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -137,32 +144,22 @@ async function initSchema(pool: Pool) {
     CREATE INDEX IF NOT EXISTS activity_log_player_idx ON activity_log(player_id);
     CREATE INDEX IF NOT EXISTS activity_log_actor_idx ON activity_log(actor_id);
   `;
-  await pool.query(SQL);
-}
 
-async function main() {
-  // Run schema init before starting the server
-  if (process.env.NODE_ENV === 'production') {
-    const pool = new Pool({
-      connectionString: process.env.DATABASE_URL,
-      ssl: { rejectUnauthorized: false },
-    });
-    try {
-      console.log('Initializing database schema…');
-      await initSchema(pool);
-      console.log('Schema ready.');
-    } catch (err) {
-      console.error('Schema init failed:', err);
-      process.exit(1);
-    } finally {
-      await pool.end();
-    }
+  try {
+    console.log('Initializing database schema…');
+    await pool.query(SQL);
+    console.log('Schema ready.');
+  } catch (err) {
+    console.error('Schema init failed (non-fatal):', err);
+  } finally {
+    await pool.end();
   }
-
-  const app = createApp();
-  app.listen(PORT, () => {
-    console.log(`JRC Offer Management server running on port ${PORT} [${process.env.NODE_ENV ?? 'development'}]`);
-  });
 }
 
-main();
+// Start HTTP server immediately so /health responds during schema init
+const app = createApp();
+app.listen(PORT, () => {
+  console.log(`JRC Offer Management server running on port ${PORT} [${process.env.NODE_ENV ?? 'development'}]`);
+  // Run schema init after server is listening — non-blocking
+  initSchema();
+});
