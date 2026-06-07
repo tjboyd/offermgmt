@@ -22,6 +22,7 @@ import wizardRouter from './routes/wizard';
 import brandingRouter        from './routes/branding';
 import csvImportRouter       from './routes/csvImport';
 import divisionsRouter       from './routes/divisions';
+import setupRouter           from './routes/setup';
 
 export function createApp() {
   const app = express();
@@ -98,6 +99,7 @@ export function createApp() {
   app.use('/api/v1/org/branding',    brandingRouter);
   app.use('/api/v1/import',          csvImportRouter);
   app.use('/api/v1/divisions',       divisionsRouter);
+  app.use('/api/v1/setup',           setupRouter);
   // Public routes (no auth) — acceptance pages + webhooks
   app.use(publicRouter);
 
