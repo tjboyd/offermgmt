@@ -9,6 +9,7 @@
     "start": "node dist/index.js",
     "db:push": "drizzle-kit push --force",
     "db:generate": "drizzle-kit generate",
+    "db:init": "tsx src/db/init-schema.ts",
     "db:migrate": "tsx src/db/migrate.ts",
     "db:dev-seed": "tsx src/db/dev-seed.ts",
     "db:studio": "drizzle-kit studio",
