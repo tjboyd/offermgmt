@@ -241,6 +241,20 @@ export function OrganizationTab() {
     }
   }
 
+  // Don't render form until branding has loaded — prevents placeholder flash
+  if (!branding) {
+    return (
+      <div className="space-y-4 max-w-lg animate-pulse">
+        {[...Array(5)].map((_, i) => (
+          <div key={i} className="space-y-1.5">
+            <div className="h-3 w-32 bg-white/[0.06] rounded" />
+            <div className="h-9 w-full bg-white/[0.04] rounded-sm" />
+          </div>
+        ))}
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-0 max-w-lg divide-y divide-white/[0.06]">
 
@@ -311,7 +325,7 @@ export function OrganizationTab() {
             value={instructions}
             onChange={(e) => setInstructions(e.target.value)}
             rows={3}
-            className="w-full bg-[#1A1A1A] border border-white/[0.08] rounded-sm px-3 py-2 text-sm text-white outline-none focus:border-brand resize-y"
+            className="w-full bg-[#1A1A1A] border border-white/[0.08] rounded-sm px-3 py-2 text-sm text-white outline-none focus:border-brand resize-y placeholder:text-[#3a3a3a]"
             placeholder="Click the button below to confirm your acceptance. You'll then be directed to complete your registration."
           />
           <p className="text-[11px] text-[#555]">
