@@ -73,12 +73,14 @@ router.post('/accept/:token', async (req: Request, res: Response, next: NextFunc
     const branding = await getBranding();
     const orgName  = branding.orgName ?? 'Jr Chargers';
     const season   = validation.season?.label ?? 'the upcoming season';
-    const player   = validation.player ? `${validation.player.firstName} ${validation.player.lastName}` : 'your player';
+    const playerName = validation.player ? `${validation.player.firstName} ${validation.player.lastName}` : 'your player';
+    const confirmationText = branding.acceptConfirmationText
+      ?? `Thank you — <strong>${playerName}</strong>'s acceptance for the <strong>${orgName} ${season}</strong> has been confirmed. A confirmation email has been sent to you.`;
 
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
     return res.send(pageShell(branding, `<div class="success">
       <h1>✓ Offer accepted!</h1>
-      <p>Thank you — <strong>${player}</strong>'s acceptance for the <strong>${orgName} ${season}</strong> has been confirmed. A confirmation email has been sent to you.</p>
+      <p>${confirmationText}</p>
       ${regUrl ? `<p style="margin-top:16px;font-size:14px;color:#155724">When you're ready, complete your registration using the button below:</p>
       <a href="${regUrl}" class="btn-accept" style="background:#2d6a4f;margin-top:4px">Complete Registration →</a>` : ''}
     </div>`));
@@ -248,6 +250,7 @@ interface OrgBranding {
   orgWebsite: string | null;
   orgContactEmail: string | null;
   acceptPageInstructions: string | null;
+  acceptConfirmationText: string | null;
 }
 
 async function getBranding(): Promise<OrgBranding> {
@@ -267,6 +270,7 @@ async function getBranding(): Promise<OrgBranding> {
     orgWebsite:             get('org_website'),
     orgContactEmail:        get('org_contact_email'),
     acceptPageInstructions: get('accept_page_instructions'),
+    acceptConfirmationText: get('accept_confirmation_text'),
   };
 }
 
@@ -420,7 +424,22 @@ async function renderDeclinePage(v: Awaited<ReturnType<typeof validateDeclineTok
 }
 
 /** Exported for the admin preview endpoint in branding.ts */
-export function renderAcceptPreview(b: OrgBranding, page: 'accept' | 'expired' = 'accept'): string {
+export function renderAcceptPreview(b: OrgBranding, page: 'accept' | 'expired' | 'confirmed' = 'accept'): string {
+  if (page === 'confirmed') {
+    const orgName  = b.orgName ?? 'Jr Chargers';
+    const confirmationText = b.acceptConfirmationText
+      ?? `Thank you — <strong>Sample Player</strong>'s acceptance for the <strong>${orgName} 2027 Season</strong> has been confirmed. A confirmation email has been sent to you.`;
+    return pageShell(b, `
+      <div class="success">
+        <h1>✓ Offer accepted!</h1>
+        <p>${confirmationText}</p>
+        <p style="margin-top:16px;font-size:14px;color:#155724">When you're ready, complete your registration using the button below:</p>
+        <a href="#" class="btn-accept" style="background:#2d6a4f;margin-top:4px">Complete Registration →</a>
+      </div>
+      <p style="font-size:11px;color:#ccc;text-align:center;margin-top:16px">Preview only — sample data shown.</p>
+    `);
+  }
+
   if (page === 'expired') {
     const expiryDate = 'June 20, 2026';
     const contactLine = b.orgContactEmail

@@ -118,7 +118,8 @@ export function OrganizationTab() {
   const [orgLocation,    setOrgLocation]    = useState('');
   const [orgWebsite,     setOrgWebsite]     = useState('');
   const [orgContactEmail,setOrgContactEmail]= useState('');
-  const [instructions,   setInstructions]   = useState('');
+  const [instructions,       setInstructions]       = useState('');
+  const [confirmationText,   setConfirmationText]   = useState('');
   // Org details save state
   const [saving,         setSaving]         = useState(false);
   const [saved,          setSaved]          = useState(false);
@@ -132,7 +133,7 @@ export function OrganizationTab() {
   const [previewHtml,    setPreviewHtml]    = useState<string | null>(null);
   const [previewLoading, setPreviewLoading] = useState(false);
   const [showPreview,    setShowPreview]    = useState(false);
-  const [previewPage,    setPreviewPage]    = useState<'accept' | 'expired'>('accept');
+  const [previewPage,    setPreviewPage]    = useState<'accept' | 'expired' | 'confirmed'>('accept');
 
   // Grade values config
   const [gradeValues,     setGradeValues]     = useState<string[]>([]);
@@ -183,6 +184,7 @@ export function OrganizationTab() {
       setOrgWebsite(branding.orgWebsite ?? '');
       setOrgContactEmail(branding.orgContactEmail ?? '');
       setInstructions(branding.acceptPageInstructions ?? '');
+      setConfirmationText(branding.acceptConfirmationText ?? '');
     }
   }, [branding]);
 
@@ -231,7 +233,10 @@ export function OrganizationTab() {
   async function handleSaveAcceptPage() {
     setSavingPage(true); setErrorPage(null); setSavedPage(false);
     try {
-      await brandingApi.patch({ acceptPageInstructions: instructions || null });
+      await brandingApi.patch({
+        acceptPageInstructions: instructions    || null,
+        acceptConfirmationText: confirmationText || null,
+      });
       setSavedPage(true);
       setTimeout(() => setSavedPage(false), 3000);
     } catch (e: unknown) {
@@ -320,7 +325,7 @@ export function OrganizationTab() {
         </div>
 
         <div className="space-y-1.5">
-          <label className="text-[12px] font-medium text-[#888] uppercase tracking-wider">Instruction Text</label>
+          <label className="text-[12px] font-medium text-[#888] uppercase tracking-wider">Accept Page — Instruction Text</label>
           <textarea
             value={instructions}
             onChange={(e) => setInstructions(e.target.value)}
@@ -329,27 +334,39 @@ export function OrganizationTab() {
             placeholder="Click the button below to confirm your acceptance. You'll then be directed to complete your registration."
           />
           <p className="text-[11px] text-[#555]">
-            Appears below the player name and deadline on the accept page. Leave blank to use the default text.
+            Shown below the player name and deadline before they click Accept. Leave blank to use the default text.
+          </p>
+        </div>
+
+        <div className="space-y-1.5">
+          <label className="text-[12px] font-medium text-[#888] uppercase tracking-wider">Confirmation Page — Message Text</label>
+          <textarea
+            value={confirmationText}
+            onChange={(e) => setConfirmationText(e.target.value)}
+            rows={3}
+            className="w-full bg-[#1A1A1A] border border-white/[0.08] rounded-sm px-3 py-2 text-sm text-white outline-none focus:border-brand resize-y placeholder:text-[#3a3a3a]"
+            placeholder="Thank you — your acceptance has been confirmed. A confirmation email has been sent to you."
+          />
+          <p className="text-[11px] text-[#555]">
+            Shown after a family clicks "Confirm Acceptance". Leave blank to use the default text (which includes the player name and season).
           </p>
         </div>
 
         {errorPage && <p className="text-[13px] text-[#E07070]">{errorPage}</p>}
         <div className="flex items-center gap-3">
           <Button variant="primary" size="sm" onClick={handleSaveAcceptPage} disabled={savingPage}>
-            {savingPage ? 'Saving…' : 'Save Instruction Text'}
+            {savingPage ? 'Saving…' : 'Save Acceptance Page Text'}
           </Button>
           {savedPage && <span className="text-[13px] text-[#66C97A]">Saved ✓</span>}
         </div>
 
         <div className="flex items-center gap-2 flex-wrap pt-1">
-          <Button variant="ghost" size="sm" onClick={() => loadPreview('accept')} disabled={previewLoading}>
-            {previewLoading && previewPage === 'accept' ? <Loader2 size={13} className="animate-spin" /> : <ExternalLink size={13} />}
-            Preview Accept Page
-          </Button>
-          <Button variant="ghost" size="sm" onClick={() => loadPreview('expired')} disabled={previewLoading}>
-            {previewLoading && previewPage === 'expired' ? <Loader2 size={13} className="animate-spin" /> : <ExternalLink size={13} />}
-            Preview Expired Page
-          </Button>
+          {(['accept', 'confirmed', 'expired'] as const).map((p) => (
+            <Button key={p} variant="ghost" size="sm" onClick={() => loadPreview(p)} disabled={previewLoading}>
+              {previewLoading && previewPage === p ? <Loader2 size={13} className="animate-spin" /> : <ExternalLink size={13} />}
+              {p === 'accept' ? 'Preview Accept Page' : p === 'confirmed' ? 'Preview Confirmation Page' : 'Preview Expired Page'}
+            </Button>
+          ))}
         </div>
 
         {showPreview && previewHtml && (
@@ -357,10 +374,12 @@ export function OrganizationTab() {
             <div className="flex items-center justify-between px-3 py-2 bg-[#111] border-b border-white/[0.06]">
               <div className="flex items-center gap-3">
                 <span className="text-[11px] text-[#555] uppercase tracking-widest">
-                  {previewPage === 'accept' ? 'Accept Page Preview' : 'Expired Offer Page Preview'}
+                  { previewPage === 'accept' ? 'Accept Page Preview'
+                  : previewPage === 'confirmed' ? 'Confirmation Page Preview'
+                  : 'Expired Offer Page Preview' }
                 </span>
                 <div className="flex gap-1">
-                  {(['accept', 'expired'] as const).map((p) => (
+                  {(['accept', 'confirmed', 'expired'] as const).map((p) => (
                     <button
                       key={p}
                       onClick={() => loadPreview(p)}
@@ -370,7 +389,7 @@ export function OrganizationTab() {
                           : 'border-white/[0.1] text-[#555] hover:text-[#AAA]'
                       }`}
                     >
-                      {p === 'accept' ? 'Accept' : 'Expired'}
+                      {p === 'accept' ? 'Accept' : p === 'confirmed' ? 'Confirmed' : 'Expired'}
                     </button>
                   ))}
                 </div>

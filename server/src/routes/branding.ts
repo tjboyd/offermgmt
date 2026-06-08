@@ -7,19 +7,20 @@ const router = Router();
 const BRANDING_KEYS = [
   'org_name', 'logo_url', 'brand_primary', 'brand_secondary',
   'org_location', 'org_website', 'org_contact_email',
-  'accept_page_instructions',
+  'accept_page_instructions', 'accept_confirmation_text',
 ] as const;
 type BrandingKey = typeof BRANDING_KEYS[number];
 
 const DEFAULTS: Record<BrandingKey, string | null> = {
-  org_name:                 'Jr Chargers',
-  logo_url:                 null,
-  brand_primary:            '#AD0303',
-  brand_secondary:          null,
-  org_location:             null,
-  org_website:              null,
-  org_contact_email:        null,
-  accept_page_instructions: null,
+  org_name:                  'Jr Chargers',
+  logo_url:                  null,
+  brand_primary:             '#AD0303',
+  brand_secondary:           null,
+  org_location:              null,
+  org_website:               null,
+  org_contact_email:         null,
+  accept_page_instructions:  null,
+  accept_confirmation_text:  null,
 };
 
 const HEX_RE = /^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{6})$/;
@@ -45,6 +46,7 @@ function rowsToResponse(rows: { key: string; value: string }[]) {
     orgWebsite:             parseValue(map['org_website'])             ?? DEFAULTS.org_website,
     orgContactEmail:        parseValue(map['org_contact_email'])       ?? DEFAULTS.org_contact_email,
     acceptPageInstructions: parseValue(map['accept_page_instructions']) ?? DEFAULTS.accept_page_instructions,
+    acceptConfirmationText: parseValue(map['accept_confirmation_text']) ?? DEFAULTS.accept_confirmation_text,
   };
 }
 
@@ -64,7 +66,8 @@ router.get('/', async (_req, res, next) => {
 router.patch('/', authenticate, requireRole('admin'), async (req, res, next) => {
   try {
     const { orgName, logoUrl, brandPrimary, brandSecondary,
-            orgLocation, orgWebsite, orgContactEmail, acceptPageInstructions,
+            orgLocation, orgWebsite, orgContactEmail,
+            acceptPageInstructions, acceptConfirmationText,
           } = req.body as Record<string, unknown>;
 
     // Validate hex colors if provided
@@ -88,6 +91,7 @@ router.patch('/', authenticate, requireRole('admin'), async (req, res, next) => 
     if (orgWebsite             !== undefined) updates.push({ key: 'org_website',              value: orgWebsite             as string | null });
     if (orgContactEmail        !== undefined) updates.push({ key: 'org_contact_email',        value: orgContactEmail        as string | null });
     if (acceptPageInstructions !== undefined) updates.push({ key: 'accept_page_instructions', value: acceptPageInstructions as string | null });
+    if (acceptConfirmationText !== undefined) updates.push({ key: 'accept_confirmation_text', value: acceptConfirmationText as string | null });
 
     if (updates.length === 0) {
       return res.status(400).json({ error: 'No valid fields provided' });
@@ -114,10 +118,10 @@ router.patch('/', authenticate, requireRole('admin'), async (req, res, next) => 
   } catch (err) { next(err); }
 });
 
-// GET /api/v1/org/branding/accept-preview?page=accept|expired — admin only
+// GET /api/v1/org/branding/accept-preview?page=accept|expired|confirmed — admin only
 router.get('/accept-preview', authenticate, requireRole('admin', 'board'), async (req, res, next) => {
   try {
-    const page = req.query.page === 'expired' ? 'expired' : 'accept';
+    const page = (req.query.page === 'expired' ? 'expired' : req.query.page === 'confirmed' ? 'confirmed' : 'accept') as 'accept' | 'expired' | 'confirmed';
     const rows = await db.select({ key: config.key, value: config.value }).from(config);
     const branding = rowsToResponse(rows.filter((r) => (BRANDING_KEYS as readonly string[]).includes(r.key)));
     const { renderAcceptPreview } = await import('./public');

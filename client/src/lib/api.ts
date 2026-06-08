@@ -592,13 +592,14 @@ export interface OrgBranding {
   orgWebsite:             string | null;
   orgContactEmail:        string | null;
   acceptPageInstructions: string | null;
+  acceptConfirmationText: string | null;
 }
 
 export const brandingApi = {
   get:           () => apiFetch<OrgBranding>('/org/branding'),
   patch:         (data: Partial<OrgBranding>) =>
     apiFetch<OrgBranding>('/org/branding', { method: 'PATCH', body: JSON.stringify(data) }),
-  acceptPreview: (page: 'accept' | 'expired' = 'accept') =>
+  acceptPreview: (page: 'accept' | 'expired' | 'confirmed' = 'accept') =>
     fetch(`/api/v1/org/branding/accept-preview?page=${page}`, {
       headers: { Authorization: `Bearer ${getAccessToken()}` },
     }).then((r) => r.text()),
